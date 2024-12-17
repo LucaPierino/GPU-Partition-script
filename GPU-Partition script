@@ -1,0 +1,58 @@
+function ShowMenu {
+    param (
+        [string]$Title = 'My Menu',
+        [string[]]$Option = @('Visualizzare partizioni GPU e a quale VM e stata assegnata', 'Aggiungere delle partizioni GPU per delle VM', 'Rimuovere a scelta dell utente le partizioni GPU', 'Rimuovere tutte le partizioni GPU', 'Uscire')
+    )
+
+    Clear-Host
+    Write-Host "================ $Title ================"
+
+    for ($i=0; $i -lt $Option.length; $i++) {
+        Write-Host "$($i+1): $($Option[$i])"
+    }
+
+    $input = Read-Host "Please make a selection"
+    return $input
+}
+
+do {
+    $selection = ShowMenu -Title 'My Menu' -Option @('Visualizzare partizioni GPU e a quale VM e stata assegnata', 'Aggiungere delle partizioni GPU per delle VM', 'Rimuovere a scelta dell utente le partizioni GPU', 'Rimuovere tutte le partizioni GPU', 'Uscire')
+
+    switch ($selection) {
+        '1' {
+            $vms = Get-VM
+            foreach ($vm in $vms) {
+                $gpus = Get-VMGpuPartitionAdapter -VMName $vm.Name
+                foreach ($gpu in $gpus) {
+                    Write-Host "VM: $($vm.Name), GPU Partition: $($gpu.Name)"
+                }
+            }
+        }
+        '2' {
+            $vmName = Read-Host "Please enter the VM name"
+            Add-VMGpuPartitionAdapter -VMName $vmName
+            Set-VMGpuPartitionAdapter -VMName $vmName -MinPartitionVRAM 80000000 -MaxPartitionVRAM 100000000 -OptimalPartitionVRAM 100000000 -MinPartitionEncode 80000000 -MaxPartitionEncode 100000000 -OptimalPartitionEncode 100000000 -MinPartitionDecode 80000000 -MaxPartitionDecode 100000000 -OptimalPartitionDecode 100000000 -MinPartitionCompute 80000000 -MaxPartitionCompute 100000000 -OptimalPartitionCompute 100000000
+            Set-VM -GuestControlledCacheTypes $true -VMName $vmName
+            Set-VM -LowMemoryMappedIoSpace 1Gb -VMName $vmName
+            Set-VM –HighMemoryMappedIoSpace 8GB –VMName $vmName
+        }
+        '3' {
+            $vms = Get-VM
+            foreach ($vm in $vms) {
+                Write-Host "VM: $($vm.Name)"
+            }
+            $vmName = Read-Host "Please enter the VM name to remove GPU partitions from"
+            Remove-VMGpuPartitionAdapter -VMName $vmName
+        }
+        '4' {
+            $vms = Get-VM
+            foreach ($vm in $vms) {
+                Remove-VMGpuPartitionAdapter -VMName $vm.Name
+            }
+        }
+        '5' {
+            return
+        }
+    }
+    pause
+} while ($selection -ne 'Q')
